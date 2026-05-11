@@ -47,7 +47,7 @@ public class RouteConfig {
                         .uri(eventsUri))
                 .route("tickets", r -> r.path("/api/v1/tickets/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
-                        .uri(ticketsUri))
+                        .uri(eventsUri))
                 .route("orders", r -> r.path("/api/v1/orders/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
                         .uri(ordersUri))
