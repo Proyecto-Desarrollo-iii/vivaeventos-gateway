@@ -21,7 +21,7 @@ public class RouteConfig {
     @Value("${orders.uri:http://localhost:8084}")
     private String ordersUri;
 
-    @Value("${payments.uri:http://localhost:8085}")
+    @Value("${payments.uri:http://localhost:8084}")
     private String paymentsUri;
 
     @Value("${checkin.uri:http://localhost:8086}")
@@ -54,6 +54,8 @@ public class RouteConfig {
                 .route("orders", r -> r.path("/api/v1/orders/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
                         .uri(ordersUri))
+                .route("payments-webhook", r -> r.path("/api/v1/payments/webhook")
+                        .uri(paymentsUri))
                 .route("payments", r -> r.path("/api/v1/payments/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
                         .uri(paymentsUri))
