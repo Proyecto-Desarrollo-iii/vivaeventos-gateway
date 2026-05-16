@@ -18,7 +18,7 @@ public class RouteConfig {
     @Value("${tickets.uri:http://localhost:8085}")
     private String ticketsUri;
 
-    @Value("${orders.uri:http://localhost:8084}")
+    @Value("${orders.uri:http://orders:8083}")
     private String ordersUri;
 
     @Value("${payments.uri:http://localhost:8084}")
@@ -47,7 +47,7 @@ public class RouteConfig {
                         .uri(eventsUri))
                 .route("tickets", r -> r.path("/api/v1/tickets/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
-                        .uri(eventsUri))
+                        .uri(ticketsUri))
                 .route("issued-tickets", r -> r.path("/api/v1/issued-tickets/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
                         .uri(ticketsUri))
