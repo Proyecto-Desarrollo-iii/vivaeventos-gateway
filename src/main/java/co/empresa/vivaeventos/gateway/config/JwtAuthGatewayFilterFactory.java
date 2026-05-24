@@ -26,6 +26,7 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
             "/api/v1/auth/ping",
             "/api/v1/auth/2fa/authenticate",
             "/api/v1/auth/2fa/send-code",
+            "/api/v1/events",
             "/ping"
     );
 
