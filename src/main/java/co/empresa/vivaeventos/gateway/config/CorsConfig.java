@@ -21,7 +21,8 @@ public class CorsConfig {
             "http://192.168.*.*:*",
             "https://192.168.*.*:*",
             "https://*.devtunnels.ms",
-            "https://*.devtunnels.ms:*"
+            "https://*.devtunnels.ms:*",
+            "https://*.run.app"
         ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
