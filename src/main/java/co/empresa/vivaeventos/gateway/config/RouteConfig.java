@@ -30,12 +30,6 @@ public class RouteConfig {
     @Value("${notifications.uri:http://localhost:8087}")
     private String notificationsUri;
 
-    @Value("${analytics.uri:http://localhost:8088}")
-    private String analyticsUri;
-
-    @Value("${audit.uri:http://localhost:8089}")
-    private String auditUri;
-
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder, JwtAuthGatewayFilterFactory jwtFilter) {
         return builder.routes()
@@ -65,12 +59,6 @@ public class RouteConfig {
                 .route("notifications", r -> r.path("/api/v1/notifications/**")
                         .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
                         .uri(notificationsUri))
-                .route("analytics", r -> r.path("/api/v1/analytics/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
-                        .uri(analyticsUri))
-                .route("audit", r -> r.path("/api/v1/audit/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
-                        .uri(auditUri))
                 .build();
     }
 }

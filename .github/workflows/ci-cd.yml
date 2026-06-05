@@ -134,5 +134,3 @@ jobs:
             PAYMENTS_URI=${{ secrets.PAYMENTS_URI }}
             CHECKIN_URI=${{ secrets.CHECKIN_URI }}
             NOTIFICATIONS_URI=${{ secrets.NOTIFICATIONS_URI }}
-            ANALYTICS_URI=${{ secrets.ANALYTICS_URI }}
-            AUDIT_URI=${{ secrets.AUDIT_URI }}
