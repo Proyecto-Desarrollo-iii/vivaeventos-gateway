@@ -2,26 +2,31 @@ package co.empresa.vivaeventos.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.cors.reactive.CorsWebFilter;
-import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-import org.springframework.web.cors.CorsConfiguration;
-
-import java.util.List;
+import org.springframework.web.server.WebFilter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 
 @Configuration
 public class CorsConfig {
 
     @Bean
-    public CorsWebFilter corsWebFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOrigin("*");
-        config.addAllowedMethod("*");
-        config.addAllowedHeader("*");
-        config.setAllowCredentials(false);
-        config.setMaxAge(3600L);
+    public WebFilter corsFilter() {
+        return (exchange, chain) -> {
+            ServerHttpResponse response = exchange.getResponse();
+            HttpHeaders headers = response.getHeaders();
+            headers.add("Access-Control-Allow-Origin", "*");
+            headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
+            headers.add("Access-Control-Allow-Headers", "*");
+            headers.add("Access-Control-Expose-Headers", "*");
+            headers.add("Access-Control-Max-Age", "3600");
 
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsWebFilter(source);
+            if (exchange.getRequest().getMethod() != null &&
+                "OPTIONS".equalsIgnoreCase(exchange.getRequest().getMethod().name())) {
+                response.setStatusCode(org.springframework.http.HttpStatus.OK);
+                return response.setComplete();
+            }
+
+            return chain.filter(exchange);
+        };
     }
 }
