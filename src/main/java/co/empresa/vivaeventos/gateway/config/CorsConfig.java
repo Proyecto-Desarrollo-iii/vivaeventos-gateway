@@ -18,13 +18,6 @@ public class CorsConfig {
             headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
             headers.add("Access-Control-Allow-Headers", "*");
             headers.add("Access-Control-Expose-Headers", "*");
-            headers.add("Access-Control-Max-Age", "3600");
-
-            if (exchange.getRequest().getMethod() != null &&
-                "OPTIONS".equalsIgnoreCase(exchange.getRequest().getMethod().name())) {
-                response.setStatusCode(org.springframework.http.HttpStatus.OK);
-                return response.setComplete();
-            }
 
             return chain.filter(exchange);
         };
