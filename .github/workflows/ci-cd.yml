@@ -27,12 +27,12 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
-      - name: Compile
-        run: mvn clean compile
-      - name: Run unit tests with coverage
-        run: mvn verify
+
+      - name: Build and Verify
+        # Unificamos el proceso en un solo comando para asegurar consistencia
+        run: mvn clean verify -Dmaven.compiler.source=21 -Dmaven.compiler.target=21
         env:
-          JWT_SECRET: dGhpc0lzQVZlcnlTZWNyZXRLZXlGb3JWYWlhRXZlbnRvc1RoYXROZWVkczUw
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
       - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4
         if: always()
