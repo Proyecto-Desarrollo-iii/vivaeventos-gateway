@@ -5,13 +5,15 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -28,11 +30,15 @@ import java.util.function.Consumer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@SpringBootTest
 class JwtAuthGatewayFilterFactoryTest {
 
-    private static final String SECRET = "dGhpc0lzQVZlcnlTZWNyZXRLZXlGb3JWYWlhRXZlbnRvc1RoYXROZWVkczUw";
-
+    @Autowired
     private JwtAuthGatewayFilterFactory filterFactory;
+
+    @Value("${jwt.secret}")
+    private String secretKey;
+
     private ServerWebExchange exchange;
     private ServerHttpRequest request;
     private ServerHttpResponse response;
@@ -41,9 +47,6 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @BeforeEach
     void setUp() {
-        filterFactory = new JwtAuthGatewayFilterFactory();
-        ReflectionTestUtils.setField(filterFactory, "secretKey", SECRET);
-
         exchange = mock(ServerWebExchange.class);
         request = mock(ServerHttpRequest.class);
         response = mock(ServerHttpResponse.class);
@@ -60,7 +63,7 @@ class JwtAuthGatewayFilterFactoryTest {
     }
 
     private String generateToken(String role) {
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
+        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
         return Jwts.builder()
                 .subject("test@email.com")
                 .claim("role", role)
@@ -97,7 +100,7 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldReturn403WhenUserHasNoRoleClaim() {
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
+        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
         String token = Jwts.builder()
                 .subject("test@email.com")
                 .issuedAt(new Date())
@@ -180,7 +183,7 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldReturn401WhenTokenExpired() {
-        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
+        SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
         String expiredToken = Jwts.builder()
                 .subject("test@email.com")
                 .claim("role", "ORGANIZER")
