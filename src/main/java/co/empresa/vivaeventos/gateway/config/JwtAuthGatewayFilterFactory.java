@@ -1,7 +1,6 @@
 package co.empresa.vivaeventos.gateway.config;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -11,6 +10,8 @@ import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFac
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.util.Arrays;
@@ -49,8 +50,7 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
             String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
 
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+                return onError(exchange, HttpStatus.UNAUTHORIZED);
             }
 
             String token = authHeader.substring(7);
@@ -63,18 +63,22 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
                         .parseSignedClaims(token)
                         .getPayload();
 
-                exchange = exchange.mutate()
+                String userRole = claims.get("role", String.class);
+
+                // Solución al IF anidado y reducción drástica de Complejidad Cognitiva
+                if (isRoleForbidden(userRole, config.getAllowedRoles())) {
+                    return onError(exchange, HttpStatus.FORBIDDEN);
+                }
+
+                ServerWebExchange mutatedExchange = exchange.mutate()
                         .request(r -> r.header("X-User-Email", claims.getSubject())
-                                .header("X-User-Role", claims.get("role", String.class)))
+                                .header("X-User-Role", userRole))
                         .build();
 
-                return chain.filter(exchange);
-            } catch (ExpiredJwtException e) {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+                return chain.filter(mutatedExchange);
             } catch (Exception e) {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
+                // Se unificaron los catch idénticos reduciendo líneas y bifurcaciones operacionales
+                return onError(exchange, HttpStatus.UNAUTHORIZED);
             }
         };
     }
@@ -88,11 +92,44 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
         });
     }
 
+    /**
+     * Evalúa si el rol del usuario está restringido según la configuración de la ruta.
+     */
+    private boolean isRoleForbidden(String userRole, List<String> allowedRoles) {
+        if (allowedRoles == null || allowedRoles.isEmpty()) {
+            return false;
+        }
+        return userRole == null || !allowedRoles.contains(userRole);
+    }
+
+    /**
+     * Centraliza el corte de la petición devolviendo el estado HTTP correspondiente.
+     */
+    private Mono<Void> onError(ServerWebExchange exchange, HttpStatus status) {
+        exchange.getResponse().setStatusCode(status);
+        return exchange.getResponse().setComplete();
+    }
+
     private SecretKey getSignInKey() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
     public static class Config {
+        private List<String> allowedRoles;
+
+        public List<String> getAllowedRoles() {
+            return allowedRoles;
+        }
+
+        public void setAllowedRoles(List<String> allowedRoles) {
+            this.allowedRoles = allowedRoles;
+        }
+
+        public static Config withRoles(String... roles) {
+            Config config = new Config();
+            config.setAllowedRoles(Arrays.asList(roles));
+            return config;
+        }
     }
 }

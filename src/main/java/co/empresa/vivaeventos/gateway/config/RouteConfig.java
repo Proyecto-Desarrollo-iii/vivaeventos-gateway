@@ -6,6 +6,8 @@ import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.List;
+
 @Configuration
 public class RouteConfig {
 
@@ -32,35 +34,39 @@ public class RouteConfig {
 
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder, JwtAuthGatewayFilterFactory jwtFilter) {
+        JwtAuthGatewayFilterFactory.Config allAuth = new JwtAuthGatewayFilterFactory.Config();
+        JwtAuthGatewayFilterFactory.Config organizerAdmin = JwtAuthGatewayFilterFactory.Config.withRoles("ORGANIZER", "ADMIN");
+        JwtAuthGatewayFilterFactory.Config checkinRoles = JwtAuthGatewayFilterFactory.Config.withRoles("LOGISTICA", "ORGANIZER", "ADMIN");
+
         return builder.routes()
                 .route("auth", r -> r.path("/api/v1/auth/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(authUri))
                 .route("events", r -> r.path("/api/v1/events/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(eventsUri))
                 .route("tickets", r -> r.path("/api/v1/tickets/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(ticketsUri))
                 .route("issued-tickets", r -> r.path("/api/v1/issued-tickets/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(ticketsUri))
                 .route("orders", r -> r.path("/api/v1/orders/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(ordersUri))
                 .route("promocodes", r -> r.path("/api/v1/promocodes/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(organizerAdmin)))
                         .uri(ordersUri))
                 .route("payments-webhook", r -> r.path("/api/v1/payments/webhook")
                         .uri(paymentsUri))
                 .route("payments", r -> r.path("/api/v1/payments/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(paymentsUri))
                 .route("checkin", r -> r.path("/api/v1/checkin/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(checkinRoles)))
                         .uri(checkinUri))
                 .route("notifications", r -> r.path("/api/v1/notifications/**")
-                        .filters(f -> f.filter(jwtFilter.apply(new JwtAuthGatewayFilterFactory.Config())))
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(notificationsUri))
                 .build();
     }
