@@ -19,19 +19,27 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
 import java.util.function.Consumer;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest
 class JwtAuthGatewayFilterFactoryTest {
+
+    // Constantes para limpiar las duplicaciones detectadas por Sonar
+    private static final String ROLE_ORGANIZER = "ORGANIZER";
+    private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_CLIENT = "CLIENT";
+    private static final String TEST_PATH = "/api/v1/orders/test";
+    private static final String TEST_EMAIL = "test@email.com";
 
     @Autowired
     private JwtAuthGatewayFilterFactory filterFactory;
@@ -64,22 +72,23 @@ class JwtAuthGatewayFilterFactoryTest {
 
     private String generateToken(String role) {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        Instant now = Instant.now();
         return Jwts.builder()
-                .subject("test@email.com")
+                .subject(TEST_EMAIL)
                 .claim("role", role)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofHours(1))))
                 .signWith(key)
                 .compact();
     }
 
     private void mockNonPublicPath() {
-        when(request.getURI()).thenReturn(URI.create("/api/v1/orders/test"));
+        when(request.getURI()).thenReturn(URI.create(TEST_PATH));
         when(request.getHeaders()).thenReturn(new HttpHeaders());
     }
 
     private void mockAuthenticatedRequest(String role) {
-        when(request.getURI()).thenReturn(URI.create("/api/v1/orders/test"));
+        when(request.getURI()).thenReturn(URI.create(TEST_PATH));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(generateToken(role));
         when(request.getHeaders()).thenReturn(headers);
@@ -87,9 +96,9 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldReturn403WhenRoleNotAllowed() {
-        mockAuthenticatedRequest("CLIENT");
+        mockAuthenticatedRequest(ROLE_CLIENT);
         GatewayFilter filter = filterFactory.apply(
-                JwtAuthGatewayFilterFactory.Config.withRoles("ORGANIZER", "ADMIN"));
+                JwtAuthGatewayFilterFactory.Config.withRoles(ROLE_ORGANIZER, ROLE_ADMIN));
 
         filter.filter(exchange, chain).block();
 
@@ -101,20 +110,21 @@ class JwtAuthGatewayFilterFactoryTest {
     @Test
     void shouldReturn403WhenUserHasNoRoleClaim() {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        Instant now = Instant.now();
         String token = Jwts.builder()
-                .subject("test@email.com")
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .subject(TEST_EMAIL)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofHours(1))))
                 .signWith(key)
                 .compact();
 
-        when(request.getURI()).thenReturn(URI.create("/api/v1/orders/test"));
+        when(request.getURI()).thenReturn(URI.create(TEST_PATH));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         when(request.getHeaders()).thenReturn(headers);
 
         GatewayFilter filter = filterFactory.apply(
-                JwtAuthGatewayFilterFactory.Config.withRoles("ORGANIZER", "ADMIN"));
+                JwtAuthGatewayFilterFactory.Config.withRoles(ROLE_ORGANIZER, ROLE_ADMIN));
 
         filter.filter(exchange, chain).block();
 
@@ -124,9 +134,9 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldAllowWhenRoleMatches() {
-        mockAuthenticatedRequest("ADMIN");
+        mockAuthenticatedRequest(ROLE_ADMIN);
         GatewayFilter filter = filterFactory.apply(
-                JwtAuthGatewayFilterFactory.Config.withRoles("ORGANIZER", "ADMIN"));
+                JwtAuthGatewayFilterFactory.Config.withRoles(ROLE_ORGANIZER, ROLE_ADMIN));
 
         filter.filter(exchange, chain).block();
 
@@ -136,7 +146,7 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldAllowWhenNoRolesConfigured() {
-        mockAuthenticatedRequest("CLIENT");
+        mockAuthenticatedRequest(ROLE_CLIENT);
         GatewayFilter filter = filterFactory.apply(new JwtAuthGatewayFilterFactory.Config());
 
         filter.filter(exchange, chain).block();
@@ -147,7 +157,7 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldAllowWhenAllowedRolesIsEmpty() {
-        mockAuthenticatedRequest("CLIENT");
+        mockAuthenticatedRequest(ROLE_CLIENT);
         JwtAuthGatewayFilterFactory.Config config = new JwtAuthGatewayFilterFactory.Config();
         config.setAllowedRoles(Collections.emptyList());
         GatewayFilter filter = filterFactory.apply(config);
@@ -160,7 +170,7 @@ class JwtAuthGatewayFilterFactoryTest {
 
     @Test
     void shouldSetUserHeadersOnValidToken() {
-        mockAuthenticatedRequest("ORGANIZER");
+        mockAuthenticatedRequest(ROLE_ORGANIZER);
         GatewayFilter filter = filterFactory.apply(new JwtAuthGatewayFilterFactory.Config());
 
         filter.filter(exchange, chain).block();
@@ -184,15 +194,16 @@ class JwtAuthGatewayFilterFactoryTest {
     @Test
     void shouldReturn401WhenTokenExpired() {
         SecretKey key = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secretKey));
+        Instant now = Instant.now();
         String expiredToken = Jwts.builder()
-                .subject("test@email.com")
-                .claim("role", "ORGANIZER")
-                .issuedAt(new Date(System.currentTimeMillis() - 7200000))
-                .expiration(new Date(System.currentTimeMillis() - 3600000))
+                .subject(TEST_EMAIL)
+                .claim("role", ROLE_ORGANIZER)
+                .issuedAt(Date.from(now.minus(Duration.ofHours(2))))
+                .expiration(Date.from(now.minus(Duration.ofHours(1))))
                 .signWith(key)
                 .compact();
 
-        when(request.getURI()).thenReturn(URI.create("/api/v1/orders/test"));
+        when(request.getURI()).thenReturn(URI.create(TEST_PATH));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(expiredToken);
         when(request.getHeaders()).thenReturn(headers);
@@ -220,18 +231,18 @@ class JwtAuthGatewayFilterFactoryTest {
     @Test
     void withRolesShouldCreateConfigWithGivenRoles() {
         JwtAuthGatewayFilterFactory.Config config =
-                JwtAuthGatewayFilterFactory.Config.withRoles("ORGANIZER", "ADMIN");
+                JwtAuthGatewayFilterFactory.Config.withRoles(ROLE_ORGANIZER, ROLE_ADMIN);
 
         assertNotNull(config.getAllowedRoles());
         assertEquals(2, config.getAllowedRoles().size());
-        assertTrue(config.getAllowedRoles().contains("ORGANIZER"));
-        assertTrue(config.getAllowedRoles().contains("ADMIN"));
+        assertTrue(config.getAllowedRoles().contains(ROLE_ORGANIZER));
+        assertTrue(config.getAllowedRoles().contains(ROLE_ADMIN));
     }
 
     @Test
     void configShouldAllowSettingRoles() {
         JwtAuthGatewayFilterFactory.Config config = new JwtAuthGatewayFilterFactory.Config();
-        List<String> roles = Arrays.asList("LOGISTICA", "ORGANIZER");
+        List<String> roles = Arrays.asList("LOGISTICA", ROLE_ORGANIZER);
         config.setAllowedRoles(roles);
 
         assertSame(roles, config.getAllowedRoles());
