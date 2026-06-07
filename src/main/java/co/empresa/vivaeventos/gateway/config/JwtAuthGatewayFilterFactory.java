@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 @Component
@@ -63,9 +64,18 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
                         .parseSignedClaims(token)
                         .getPayload();
 
+                String userRole = claims.get("role", String.class);
+
+                if (config.getAllowedRoles() != null && !config.getAllowedRoles().isEmpty()) {
+                    if (userRole == null || !config.getAllowedRoles().contains(userRole)) {
+                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                        return exchange.getResponse().setComplete();
+                    }
+                }
+
                 exchange = exchange.mutate()
                         .request(r -> r.header("X-User-Email", claims.getSubject())
-                                .header("X-User-Role", claims.get("role", String.class)))
+                                .header("X-User-Role", userRole))
                         .build();
 
                 return chain.filter(exchange);
@@ -94,5 +104,20 @@ public class JwtAuthGatewayFilterFactory extends AbstractGatewayFilterFactory<Jw
     }
 
     public static class Config {
+        private List<String> allowedRoles;
+
+        public List<String> getAllowedRoles() {
+            return allowedRoles;
+        }
+
+        public void setAllowedRoles(List<String> allowedRoles) {
+            this.allowedRoles = allowedRoles;
+        }
+
+        public static Config withRoles(String... roles) {
+            Config config = new Config();
+            config.setAllowedRoles(Arrays.asList(roles));
+            return config;
+        }
     }
 }
