@@ -30,7 +30,7 @@ jobs:
       - name: Compile
         run: mvn clean compile
       - name: Run unit tests with coverage
-        run: mvn verify
+        run: mvn clean verify -Pcoverage
         env:
           JWT_SECRET: dGhpc0lzQVZlcnlTZWNyZXRLZXlGb3JWYWlhRXZlbnRvc1RoYXROZWVkczUw
       - name: Upload JaCoCo coverage report
