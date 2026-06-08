@@ -32,6 +32,9 @@ public class RouteConfig {
     @Value("${notifications.uri:http://localhost:8087}")
     private String notificationsUri;
 
+    @Value("${audit.uri:http://audit:8089}")
+    private String auditUri;
+
     @Bean
     public RouteLocator customRouteLocator(RouteLocatorBuilder builder, JwtAuthGatewayFilterFactory jwtFilter) {
         JwtAuthGatewayFilterFactory.Config allAuth = new JwtAuthGatewayFilterFactory.Config();
@@ -68,6 +71,9 @@ public class RouteConfig {
                 .route("notifications", r -> r.path("/api/v1/notifications/**")
                         .filters(f -> f.filter(jwtFilter.apply(allAuth)))
                         .uri(notificationsUri))
+                .route("audit", r -> r.path("/api/v1/audit/**")
+                        .filters(f -> f.filter(jwtFilter.apply(allAuth)))
+                        .uri(auditUri))
                 .build();
     }
 }
