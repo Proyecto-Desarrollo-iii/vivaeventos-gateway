@@ -28,6 +28,7 @@ class RouteConfigTest {
                     assertTrue(ids.contains("payments"));
                     assertTrue(ids.contains("payments-webhook"));
                     assertTrue(ids.contains("notifications"));
+                    assertTrue(ids.contains("audit"));
                 })
                 .verifyComplete();
     }
@@ -45,6 +46,15 @@ class RouteConfigTest {
     void shouldHaveCheckinRoute() {
         StepVerifier.create(routeLocator.getRoutes()
                         .filter(r -> r.getId().equals("checkin"))
+                        .count())
+                .assertNext(count -> assertTrue(count > 0))
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldHaveAuditRoute() {
+        StepVerifier.create(routeLocator.getRoutes()
+                        .filter(r -> r.getId().equals("audit"))
                         .count())
                 .assertNext(count -> assertTrue(count > 0))
                 .verifyComplete();
